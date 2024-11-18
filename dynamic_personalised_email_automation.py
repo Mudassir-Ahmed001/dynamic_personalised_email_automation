@@ -189,7 +189,7 @@ def display_how_to_use():
 
 
 def main():
-    st.title("bhayankar aangaar gir gir boolke bhejo emails ab khali")
+    st.title("bhayankar aangaar gir gir bolke bhejo emails ab khali")
 
     # Display "How to Use" Button on Main Page
     if st.button("📖 How to Use"):
