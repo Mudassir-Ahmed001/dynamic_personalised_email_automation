@@ -138,9 +138,10 @@ class EmailAutomation:
         self.logger.debug(f"Personalized Content: {personalized_content}")
 
         message = MIMEMultipart()
-        message['From'] = sender
-        message['To'] = recipient_email
-        message['Subject'] = personalized_subject
+        message['From'] = sender.encode('utf-8')
+        message['To'] = recipient_email.encode('utf-8')
+        message['Subject'] = personalized_subject.encode('utf-8')
+
         message.attach(MIMEText(personalized_content, 'html', 'utf-8'))
 
         if certificate:
@@ -278,11 +279,12 @@ def main():
             automation = EmailAutomation(debug_mode=False)
 
             certificates = [
-                (automation._clean_text(file.name), file.read()) for file in certificate_files
+                (automation._clean_text(str(file.name)), file.read()) for file in certificate_files
             ]
             attachments = [
-                (automation._clean_text(file.name), file.read()) for file in additional_attachments
+                (automation._clean_text(str(file.name)), file.read()) for file in additional_attachments
             ] if additional_attachments else []
+
 
 
             automation.setup_smtp(sender_email, sender_password)
