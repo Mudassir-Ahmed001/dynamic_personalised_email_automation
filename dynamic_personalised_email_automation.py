@@ -119,55 +119,43 @@ class EmailAutomation:
 
 
     def create_message(self, sender: str, recipient_data: Dict, subject_template: str,
-                    content_template: str, certificate: Optional[tuple],
-                    additional_attachments: Optional[List[tuple]] = None) -> MIMEMultipart:
-        """Create personalized email message."""
+                       content_template: str, certificate: Optional[tuple],
+                       additional_attachments: Optional[List[tuple]] = None) -> MIMEMultipart:
         recipient_email = recipient_data.get('email', '')
-        
-        # Clean the templates before formatting
         subject_template = self._clean_text(subject_template)
         content_template = self._clean_text(content_template)
-        
-        # Clean the recipient data
         clean_recipient_data = {k: self._clean_text(str(v)) for k, v in recipient_data.items()}
-        
+
         personalized_subject = subject_template.format(**clean_recipient_data)
         personalized_content = content_template.format(**clean_recipient_data)
-        
+
+        # Log debugging info
+        self.logger.debug(f"Personalized Subject: {personalized_subject}")
+        self.logger.debug(f"Personalized Content: {personalized_content}")
+
         message = MIMEMultipart()
         message['From'] = sender
         message['To'] = recipient_email
         message['Subject'] = personalized_subject
         message.attach(MIMEText(personalized_content, 'html', 'utf-8'))
 
-        # Attach the matched certificate
         if certificate:
             cert_name, cert_content = certificate
-            cert_name = self._clean_text(cert_name)  # Clean file name
+            cert_name = self._clean_text(cert_name)
             file_ext = cert_name.lower().split('.')[-1]
-            if file_ext == 'pdf':
-                attachment = MIMEApplication(cert_content, _subtype="pdf")
-            elif file_ext in ['jpg', 'jpeg', 'png']:
-                attachment = MIMEImage(cert_content)
-            else:
-                raise ValueError(f"Unsupported certificate format: {file_ext}")
+            attachment = MIMEApplication(cert_content, _subtype=file_ext)
             attachment.add_header('Content-Disposition', 'attachment', filename=cert_name)
             message.attach(attachment)
-        
+
         if additional_attachments:
             for file_name, file_content in additional_attachments:
-                try:
-                    file_name = self._clean_text(file_name)  # Clean file name
-                    file_ext = file_name.lower().split('.')[-1]
-                    if file_ext == 'pdf':
-                        attachment = MIMEApplication(file_content, _subtype="pdf")
-                    else:
-                        attachment = MIMEImage(file_content)
-                    attachment.add_header('Content-Disposition', 'attachment', filename=file_name)
-                    message.attach(attachment)
-                except Exception as e:
-                    self.logger.error(f"Error attaching file {file_name}: {str(e)}")
-                    raise
+                file_name = self._clean_text(file_name)
+                file_ext = file_name.lower().split('.')[-1]
+                attachment = MIMEApplication(file_content, _subtype=file_ext)
+                attachment.add_header('Content-Disposition', 'attachment', filename=file_name)
+                message.attach(attachment)
+
+        return message
 
 
 
@@ -224,14 +212,14 @@ def main():
 
     recipients_df = None
 
-    if recipient_file is not None:
+    if recipient_file:
+        automation = EmailAutomation(debug_mode=False)
         try:
             recipients_df = pd.read_excel(recipient_file, engine='openpyxl')
             recipients_df.columns = [col.lower().strip() for col in recipients_df.columns]
-
-            if 'name' not in recipients_df.columns or 'email' not in recipients_df.columns:
-                st.error("File must contain 'name' and 'email' columns.")
-                return
+            recipients_df['name'] = recipients_df['name'].apply(automation._clean_text)
+            recipients_df['email'] = recipients_df['email'].apply(automation._clean_text)
+            recipients_df = recipients_df[recipients_df['email'].apply(EmailValidator.is_valid_email)]
 
             automation = EmailAutomation(debug_mode=False)
 
