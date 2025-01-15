@@ -117,7 +117,7 @@ class EmailAutomation:
         message['From'] = sender
         message['To'] = recipient_email
         message['Subject'] = personalized_subject
-        message.attach(MIMEText(personalized_content, 'html'))
+        message.attach(MIMEText(personalized_content, 'html', 'utf-8'))
 
         # Attach the matched certificate
         if certificate:
