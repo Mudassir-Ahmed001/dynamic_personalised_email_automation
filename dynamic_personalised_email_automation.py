@@ -250,6 +250,7 @@ def main():
     subject_template = st.text_input("Email Subject Template")
     content_template = st.text_area("Email Content Template (HTML supported)")
     content_template = content_template.replace("\xa0", "")
+    content_template = content_template.encode('ascii', 'ignore').decode('ascii')
 
     if st.button("Send Emails"):
         try:
