@@ -105,16 +105,40 @@ class EmailAutomation:
 
         status_text.text("Email campaign completed!")
 
+    def _clean_text(self, text: str) -> str:
+        """Clean text by removing problematic characters and normalizing spaces."""
+        if not isinstance(text, str):
+            return str(text)
+        
+        # Replace various types of spaces and problematic characters
+        text = text.replace('\xa0', ' ')  # Replace non-breaking space
+        text = text.replace('\u200b', '')  # Replace zero-width space
+        text = text.replace('\t', ' ')     # Replace tabs with spaces
+        
+        # Normalize multiple spaces into single space
+        text = ' '.join(text.split())
+        
+        # Handle other potential non-ASCII characters
+        text = text.encode('ascii', 'ignore').decode('ascii')
+        
+        return text
+
     def create_message(self, sender: str, recipient_data: Dict, subject_template: str,
-                       content_template: str, certificate: Optional[tuple],
-                       additional_attachments: Optional[List[tuple]] = None) -> MIMEMultipart:
+                    content_template: str, certificate: Optional[tuple],
+                    additional_attachments: Optional[List[tuple]] = None) -> MIMEMultipart:
         """Create personalized email message."""
         recipient_email = recipient_data.get('email', '')
-        personalized_subject = subject_template.format(**recipient_data)
-        personalized_content = content_template.format(**recipient_data)
-        personalized_content = personalized_content.encode('utf-8', 'ignore').decode('utf-8')
-                           
-
+        
+        # Clean the templates before formatting
+        subject_template = self._clean_text(subject_template)
+        content_template = self._clean_text(content_template)
+        
+        # Clean the recipient data
+        clean_recipient_data = {k: self._clean_text(str(v)) for k, v in recipient_data.items()}
+        
+        personalized_subject = subject_template.format(**clean_recipient_data)
+        personalized_content = content_template.format(**clean_recipient_data)
+        
         message = MIMEMultipart()
         message['From'] = sender
         message['To'] = recipient_email
@@ -251,8 +275,8 @@ def main():
     st.write("Use {variable_name} syntax for personalization")
     subject_template = st.text_input("Email Subject Template")
     content_template = st.text_area("Email Content Template (HTML supported)")
-    content_template = content_template.replace("\xa0", "")
-    content_template = content_template.encode('ascii', 'ignore').decode('ascii')
+    # Remove any special characters before processing
+    content_template = ' '.join(content_template.split())  # Normalize spaces
 
     if st.button("Send Emails"):
         try:
