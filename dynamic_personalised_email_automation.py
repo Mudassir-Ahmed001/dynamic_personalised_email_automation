@@ -249,6 +249,7 @@ def main():
     st.write("Use {variable_name} syntax for personalization")
     subject_template = st.text_input("Email Subject Template")
     content_template = st.text_area("Email Content Template (HTML supported)")
+    content_template = content_template.replace("\xa0", "")
 
     if st.button("Send Emails"):
         try:
