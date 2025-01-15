@@ -106,22 +106,17 @@ class EmailAutomation:
         status_text.text("Email campaign completed!")
 
     def _clean_text(self, text: str) -> str:
-        """Clean text by removing problematic characters and normalizing spaces."""
+        """Clean text by normalizing spaces and encoding it to UTF-8."""
         if not isinstance(text, str):
             return str(text)
         
-        # Replace various types of spaces and problematic characters
-        text = text.replace('\xa0', ' ')  # Replace non-breaking space
-        text = text.replace('\u200b', '')  # Replace zero-width space
-        text = text.replace('\t', ' ')     # Replace tabs with spaces
-        
-        # Normalize multiple spaces into single space
+        # Replace non-breaking spaces and normalize spaces
+        text = text.replace('\xa0', ' ').replace('\u200b', '').strip()
         text = ' '.join(text.split())
         
-        # Handle other potential non-ASCII characters
-        text = text.encode('ascii', 'ignore').decode('ascii')
-        
-        return text
+        # Ensure text is in UTF-8
+        return text.encode('utf-8', 'ignore').decode('utf-8')
+
 
     def create_message(self, sender: str, recipient_data: Dict, subject_template: str,
                     content_template: str, certificate: Optional[tuple],
@@ -148,6 +143,7 @@ class EmailAutomation:
         # Attach the matched certificate
         if certificate:
             cert_name, cert_content = certificate
+            cert_name = self._clean_text(cert_name)  # Clean file name
             file_ext = cert_name.lower().split('.')[-1]
             if file_ext == 'pdf':
                 attachment = MIMEApplication(cert_content, _subtype="pdf")
@@ -157,11 +153,11 @@ class EmailAutomation:
                 raise ValueError(f"Unsupported certificate format: {file_ext}")
             attachment.add_header('Content-Disposition', 'attachment', filename=cert_name)
             message.attach(attachment)
-
-        # Attach additional files if provided
+        
         if additional_attachments:
             for file_name, file_content in additional_attachments:
                 try:
+                    file_name = self._clean_text(file_name)  # Clean file name
                     file_ext = file_name.lower().split('.')[-1]
                     if file_ext == 'pdf':
                         attachment = MIMEApplication(file_content, _subtype="pdf")
@@ -173,7 +169,6 @@ class EmailAutomation:
                     self.logger.error(f"Error attaching file {file_name}: {str(e)}")
                     raise
 
-        return message
 
 
 def display_how_to_use():
@@ -241,9 +236,14 @@ def main():
             if 'name' not in recipients_df.columns or 'email' not in recipients_df.columns:
                 st.error("File must contain 'name' and 'email' columns.")
                 return
-
-            # Validate emails
+            
+            # Clean recipient data
+            recipients_df['name'] = recipients_df['name'].apply(lambda x: automation._clean_text(x))
+            recipients_df['email'] = recipients_df['email'].apply(lambda x: automation._clean_text(x))
+            
+            # Validate emails after cleaning
             recipients_df = recipients_df[recipients_df['email'].apply(EmailValidator.is_valid_email)]
+
 
             st.write("Data Preview (first 5 rows):")
             st.write(recipients_df.head())
