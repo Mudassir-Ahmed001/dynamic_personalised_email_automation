@@ -112,6 +112,8 @@ class EmailAutomation:
         recipient_email = recipient_data.get('email', '')
         personalized_subject = subject_template.format(**recipient_data)
         personalized_content = content_template.format(**recipient_data)
+        personalized_content = personalized_content.encode('utf-8', 'ignore').decode('utf-8')
+                           
 
         message = MIMEMultipart()
         message['From'] = sender
