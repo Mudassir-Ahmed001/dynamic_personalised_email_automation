@@ -212,38 +212,32 @@ def display_how_to_use():
 def main():
     st.title("bhayankar aangaar gir gir bolke bhejo emails ab khali")
 
-    # Display "How to Use" Button on Main Page
     if st.button("📖 How to Use"):
         display_how_to_use()
 
-    # Sender credentials
     sender_email = st.text_input("Sender Email")
     st.info("Not the email password! APP PASSWORD for the respective email(read the 'How to Use' for more clarity)")
     sender_password = st.text_input("Sender APP Password", type="password")
 
-    # File uploader for `.xlsx` files
     st.write("Upload recipient data file (.xlsx only)")
     recipient_file = st.file_uploader("Upload File", type=['xlsx'])
 
-    recipients_df = None  # Initialize recipients_df
+    recipients_df = None
 
     if recipient_file is not None:
         try:
-            # Read Excel file
             recipients_df = pd.read_excel(recipient_file, engine='openpyxl')
             recipients_df.columns = [col.lower().strip() for col in recipients_df.columns]
 
             if 'name' not in recipients_df.columns or 'email' not in recipients_df.columns:
                 st.error("File must contain 'name' and 'email' columns.")
                 return
-            
-            # Clean recipient data
+
+            automation = EmailAutomation(debug_mode=False)
+
             recipients_df['name'] = recipients_df['name'].apply(lambda x: automation._clean_text(x))
             recipients_df['email'] = recipients_df['email'].apply(lambda x: automation._clean_text(x))
-            
-            # Validate emails after cleaning
             recipients_df = recipients_df[recipients_df['email'].apply(EmailValidator.is_valid_email)]
-
 
             st.write("Data Preview (first 5 rows):")
             st.write(recipients_df.head())
@@ -255,7 +249,6 @@ def main():
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
 
-    # Certificate uploads
     st.write("Upload certificates (names should match recipient names in the .xlsx file)")
     certificate_files = st.file_uploader(
         "Upload certificates",
@@ -263,20 +256,17 @@ def main():
         accept_multiple_files=True
     )
 
-    # Additional attachments
     additional_attachments = st.file_uploader(
         "Upload additional attachments (optional)",
         type=['jpg', 'jpeg', 'png', 'pdf'],
         accept_multiple_files=True
     )
 
-    # Email content
     st.subheader("Email Content")
     st.write("Use {variable_name} syntax for personalization")
     subject_template = st.text_input("Email Subject Template")
     content_template = st.text_area("Email Content Template (HTML supported)")
-    # Remove any special characters before processing
-    content_template = ' '.join(content_template.split())  # Normalize spaces
+    content_template = ' '.join(content_template.split())
 
     if st.button("Send Emails"):
         try:
@@ -294,19 +284,11 @@ def main():
 
             automation = EmailAutomation(debug_mode=False)
 
-            # Process certificates
             certificates = [(file.name, file.read()) for file in certificate_files]
+            attachments = [(file.name, file.read()) for file in additional_attachments] if additional_attachments else []
 
-            # Process additional attachments
-            attachments = []
-            if additional_attachments:
-                for file in additional_attachments:
-                    attachments.append((file.name, file.read()))
-
-            # Setup SMTP
             automation.setup_smtp(sender_email, sender_password)
 
-            # Send emails
             automation.send_emails(
                 sender_email,
                 recipients_df,
@@ -322,7 +304,7 @@ def main():
             st.error(f"An error occurred: {str(e)}")
             logging.error(f"Critical error: {str(e)}")
         finally:
-            if automation.smtp_server:
+            if 'automation' in locals() and automation.smtp_server:
                 automation.smtp_server.quit()
 
 
