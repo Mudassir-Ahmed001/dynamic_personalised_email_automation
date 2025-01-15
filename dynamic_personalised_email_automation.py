@@ -109,13 +109,17 @@ class EmailAutomation:
         """Clean text by normalizing spaces and encoding it to UTF-8."""
         if not isinstance(text, str):
             return str(text)
-        
-        # Replace non-breaking spaces and normalize spaces
-        text = text.replace('\xa0', ' ').replace('\u200b', '').strip()
-        text = ' '.join(text.split())
-        
-        # Ensure text is in UTF-8
-        return text.encode('utf-8', 'ignore').decode('utf-8')
+    
+        try:
+            # Replace non-breaking spaces and normalize spaces
+            text = text.replace('\xa0', ' ').replace('\u200b', '').strip()
+            text = ' '.join(text.split())
+            # Ensure text is in UTF-8
+            return text.encode('utf-8', 'ignore').decode('utf-8')
+        except UnicodeEncodeError as e:
+            self.logger.error(f"Unicode encoding error for text: {text}")
+            raise e
+
 
 
     def create_message(self, sender: str, recipient_data: Dict, subject_template: str,
@@ -223,8 +227,9 @@ def main():
 
             automation = EmailAutomation(debug_mode=False)
 
-            recipients_df['name'] = recipients_df['name'].apply(lambda x: automation._clean_text(x))
-            recipients_df['email'] = recipients_df['email'].apply(lambda x: automation._clean_text(x))
+            recipients_df['name'] = recipients_df['name'].apply(lambda x: automation._clean_text(str(x)))
+            recipients_df['email'] = recipients_df['email'].apply(lambda x: automation._clean_text(str(x)))
+
             recipients_df = recipients_df[recipients_df['email'].apply(EmailValidator.is_valid_email)]
 
             st.write("Data Preview (first 5 rows):")
@@ -272,8 +277,13 @@ def main():
 
             automation = EmailAutomation(debug_mode=False)
 
-            certificates = [(file.name, file.read()) for file in certificate_files]
-            attachments = [(file.name, file.read()) for file in additional_attachments] if additional_attachments else []
+            certificates = [
+                (automation._clean_text(file.name), file.read()) for file in certificate_files
+            ]
+            attachments = [
+                (automation._clean_text(file.name), file.read()) for file in additional_attachments
+            ] if additional_attachments else []
+
 
             automation.setup_smtp(sender_email, sender_password)
 
