@@ -198,7 +198,8 @@ elif selected == "Email Content Generation":
                 if response.status_code == 200:
                     response_text = response.json()["choices"][0]["message"]["content"]
                     st.markdown("### Generated Email Content:")
-                    message(response_text)
+                    st.write(response_text)
+
                 else:
                     st.error(f"Failed to generate content: {response.status_code} - {response.json()}")
             except Exception as e:
