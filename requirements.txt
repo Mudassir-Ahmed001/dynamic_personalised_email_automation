@@ -1,1 +1,4 @@
 openpyxl
+st_chat_message
+streamlit_option_menu
+streamlit
